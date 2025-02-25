@@ -1,4 +1,4 @@
-# buzzline-05-montoya
+# custom-06-montoya
 
 This project ingests live data from a local file and processes it using a custom Kafka consumer. The consumer reads real-time messages, processes them, and stores insights in a SQLite database. Additionally, sentiment analysis is performed on each message to track trends over time.
 

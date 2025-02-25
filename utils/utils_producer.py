@@ -9,11 +9,13 @@ Producers send messages to a Kafka topic.
 #####################################
 
 # Import packages from Python Standard Library
+import os
 import sys
 import socket
 import time
 
 # Import external packages
+from dotenv import load_dotenv
 from kafka import KafkaProducer, KafkaConsumer, errors
 from kafka.admin import (
     KafkaAdminClient,
@@ -23,8 +25,38 @@ from kafka.admin import (
 )
 
 # Import functions from local modules
-from .utils_config import get_zookeeper_address, get_kafka_broker_address
-from .utils_logger import logger
+from utils.utils_logger import logger
+
+#####################################
+# Load Environment Variables
+#####################################
+
+load_dotenv()
+
+#####################################
+# Default Configurations
+#####################################
+
+DEFAULT_ZOOKEEPER_ADDRESS = "localhost:2181"
+DEFAULT_KAFKA_BROKER_ADDRESS = "localhost:9092"
+
+#####################################
+# Helper Functions
+#####################################
+
+def get_kafka_broker_address():
+    """Fetch Kafka broker address from environment or use default."""
+    broker_address = os.getenv("KAFKA_BROKER_ADDRESS", "localhost:9092")
+    logger.info(f"Kafka broker address: {broker_address}")
+    return broker_address
+
+
+def get_zookeeper_address():
+    """Fetch Zookeeper address from environment or use default."""
+    zk_address = os.getenv("ZOOKEEPER_ADDRESS", "localhost:2181")
+    logger.info(f"Zookeeper address: {zk_address}")
+    return zk_address
+
 
 #####################################
 # Kafka and Zookeeper Readiness Checks
@@ -72,7 +104,7 @@ def check_kafka_service_is_ready():
 
 
 #####################################
-# Verify Zookeeper and Kafka Services
+# Kafka Producer and Topic Management
 #####################################
 
 
@@ -90,11 +122,6 @@ def verify_services():
             "Kafka broker is not ready. Please check your Kafka setup. Exiting..."
         )
         sys.exit(2)
-
-
-#####################################
-# Create a Kafka Producer
-#####################################
 
 
 def create_kafka_producer(value_serializer=None):
@@ -128,11 +155,6 @@ def create_kafka_producer(value_serializer=None):
         return None
 
 
-#####################################
-# Create a Kafka Topic
-#####################################
-
-
 def create_kafka_topic(topic_name, group_id=None):
     """
     Create a fresh Kafka topic with the given name.
@@ -147,7 +169,7 @@ def create_kafka_topic(topic_name, group_id=None):
         # Check if the topic exists
         topics = admin_client.list_topics()
         if topic_name in topics:
-            logger.info(f"Topic '{topic_name}' exists. Clearing it out...")
+            logger.info(f"Topic '{topic_name}' already exists. Clearing it out...")
             clear_kafka_topic(topic_name, group_id)
 
         else:
@@ -166,11 +188,6 @@ def create_kafka_topic(topic_name, group_id=None):
         admin_client.close()
 
 
-#####################################
-# Clear a Kafka Topic
-#####################################
-
-
 def clear_kafka_topic(topic_name, group_id):
     """
     Consume and discard all messages in the Kafka topic to clear it.
@@ -186,12 +203,8 @@ def clear_kafka_topic(topic_name, group_id):
         # Fetch the current retention period
         config_resource = ConfigResource(ConfigResourceType.TOPIC, topic_name)
         configs = admin_client.describe_configs([config_resource])
-        original_retention = configs[config_resource].get(
-            "retention.ms", "604800000"
-        )  # Default to 7 days
-        logger.info(
-            f"Original retention.ms for topic '{topic_name}': {original_retention}"
-        )
+        original_retention = configs[config_resource].get("retention.ms", "604800000")  # Default to 7 days
+        logger.info(f"Original retention.ms for topic '{topic_name}': {original_retention}")
 
         # Temporarily set retention to 1ms
         admin_client.alter_configs({config_resource: {"retention.ms": "1"}})
@@ -215,50 +228,11 @@ def clear_kafka_topic(topic_name, group_id):
         logger.info(f"All messages cleared from topic '{topic_name}'.")
 
         # Restore the original retention period
-        admin_client.alter_configs(
-            {config_resource: {"retention.ms": original_retention}}
-        )
-        logger.info(
-            f"Retention.ms restored to {original_retention} for topic '{topic_name}'."
-        )
+        admin_client.alter_configs({config_resource: {"retention.ms": original_retention}})
+        logger.info(f"Retention.ms restored to {original_retention} for topic '{topic_name}'.")
 
     except Exception as e:
         logger.error(f"Error managing retention for topic '{topic_name}': {e}")
-    finally:
-        admin_client.close()
-
-
-#####################################
-# Find Out if a Kafka Topic Exists
-#####################################
-
-
-def is_topic_available(topic_name) -> bool:
-    """
-    Verify a kafka topic exists with the given name.
-    Args:
-        topic_name (str): Name of the Kafka topic.
-    Returns:
-        bool: True if the topic exists, False otherwise.
-    """
-    kafka_broker = get_kafka_broker_address()
-
-    try:
-        admin_client = KafkaAdminClient(bootstrap_servers=kafka_broker)
-
-        # Check if the topic exists
-        topics = admin_client.list_topics()
-        if topic_name in topics:
-            logger.info(f"Topic '{topic_name}' already exists. ")
-            return True
-        else:
-            logger.error(f"Topic '{topic_name}' does not exist.")
-            return False
-
-    except Exception as e:
-        logger.error(f"Error verifying topic '{topic_name}': {e}")
-        sys.exit(8)
-
     finally:
         admin_client.close()
 
