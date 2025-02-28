@@ -1,10 +1,10 @@
 """
 consumer_montoya.py
 
-Consume json messages from a live data file.
-Insert the processed messages into an SQLite database.
+Consumes JSON messages from a live data file and inserts processed messages into an SQLite database.
+Additionally, it tracks sentiment trends and updates a real-time visualization.
 
-Database functions are in utils/utils_config module.
+Database functions are in the utils/utils_config module.
 """
 
 #####################################
@@ -19,20 +19,33 @@ from collections import defaultdict
 import utils.utils_config as config
 from utils.utils_logger import logger
 
+#####################################
+# Initialize Data Structures for Visualization
+#####################################
+
+# Dictionary to store sentiment scores per category
 category_sentiments = defaultdict(list)
+
+# List to track the number of processed messages for x-axis values
 time_series = []
+
+# Initialize the plot for real-time sentiment analysis
 fig, ax = plt.subplots()
-plt.ion()  # Enable interactive mode
+plt.ion()  # Enable interactive mode for live updates
 
 def update_sentiment_chart():
-    """Update the real-time sentiment trend chart."""
+    """
+    Updates the real-time sentiment trend chart with the latest data.
+    This function clears the plot and re-renders the latest sentiment scores.
+    """
     ax.clear()
 
     if not time_series:
-        return
+        return  # Skip updating if no messages have been processed yet
 
+    # Plot sentiment trends for each category
     for category, sentiments in category_sentiments.items():
-        x_values = time_series[-len(sentiments):]
+        x_values = time_series[-len(sentiments):]  # Keep x-axis aligned with data length
         ax.plot(x_values, sentiments, marker="o", linestyle="-", label=category)
 
     ax.set_xlabel("Review Count")
@@ -41,10 +54,17 @@ def update_sentiment_chart():
     ax.legend()
 
     plt.draw()
-    plt.pause(0.1)
+    plt.pause(0.1)  # Pause briefly to allow real-time updates
+
+#####################################
+# Database Initialization
+#####################################
 
 def init_db(db_path):
-    """Initialize the SQLite database."""
+    """
+    Initializes the SQLite database by creating the necessary table if it doesn't exist.
+    The table stores customer reviews and related metadata.
+    """
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     
@@ -64,8 +84,14 @@ def init_db(db_path):
     conn.commit()
     conn.close()
 
+#####################################
+# Insert Processed Message into Database
+#####################################
+
 def insert_message(message, db_path):
-    """Insert a processed message into the database."""
+    """
+    Inserts a processed customer review message into the SQLite database.
+    """
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
@@ -78,42 +104,65 @@ def insert_message(message, db_path):
     conn.commit()
     conn.close()
 
+#####################################
+# Process Incoming Message
+#####################################
+
 def process_message(message):
-    """Process and transform a JSON message."""
+    """
+    Processes an incoming JSON message, extracting relevant data and updating sentiment tracking.
+    """
     category = message.get("category")
-    sentiment = float(message.get("sentiment", 0.0))
+    sentiment = float(message.get("sentiment", 0.0))  # Ensure sentiment is a valid float
 
     if category and sentiment:
         category_sentiments[category].append(sentiment)
+
+        # Maintain a rolling window of the last 50 sentiment values for each category
         if len(category_sentiments[category]) > 50:
             category_sentiments[category].pop(0)
 
+        # Increment the message count for x-axis tracking
         time_series.append(len(time_series) + 1)
 
     return message
 
+#####################################
+# Consume Messages from File
+#####################################
+
 def consume_messages_from_file(live_data_path, db_path, interval_secs):
-    """Consume new messages and update sentiment tracking."""
+    """
+    Reads messages from a live data file, processes them, and updates the database and sentiment chart.
+    Runs continuously with a short delay between reads.
+    """
     while True:
         with open(live_data_path, "r") as file:
             for line in file:
-                if line.strip():
-                    message = json.loads(line.strip())
+                if line.strip():  # Ensure the line isn't empty
+                    message = json.loads(line.strip())  # Convert JSON string to dictionary
                     processed_message = process_message(message)
+
                     if processed_message:
                         insert_message(processed_message, db_path)
-                        update_sentiment_chart()
+                        update_sentiment_chart()  # Refresh the sentiment visualization
 
-        time.sleep(interval_secs)
+        time.sleep(interval_secs)  # Wait before reading new messages
+
+#####################################
+# Define Main Function
+#####################################
 
 def main():
-    """Main function to run the consumer process."""
+    """
+    Initializes the database and starts consuming messages from the live data file.
+    """
     db_path = "customer_feedback.db"
     live_data_path = config.get_live_data_path()
     interval_secs = config.get_message_interval_seconds_as_int()
 
-    init_db(db_path)
-    consume_messages_from_file(live_data_path, db_path, interval_secs)
+    init_db(db_path)  # Ensure the database is set up
+    consume_messages_from_file(live_data_path, db_path, interval_secs)  # Start processing messages
 
 if __name__ == "__main__":
     main()

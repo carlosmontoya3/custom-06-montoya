@@ -4,21 +4,25 @@ This project ingests live data from a local file and processes it using a custom
 
 ## VS Code Extensions
 
-- Black Formatter by Microsoft
-- Markdown All in One by Yu Zhang
-- PowerShell by Microsoft (on Windows Machines)
-- Pylance by Microsoft
-- Python by Microsoft
-- Python Debugger by Microsoft
-- Ruff by Astral Software (Linter)
-- **SQLite Viewer by Florian Klampfer**
-- WSL by Microsoft (on Windows Machines)
+For best performance and code management, ensure the following extensions are installed:
+
+- **Black Formatter** by Microsoft (for automatic code formatting)
+- **Markdown All in One** by Yu Zhang (for better Markdown support)
+- **PowerShell** by Microsoft (for running scripts on Windows)
+- **Pylance** by Microsoft (for Python code intelligence)
+- **Python** by Microsoft (for running Python scripts)
+- **Python Debugger** by Microsoft (for debugging Python code)
+- **Ruff** by Astral Software (Linter for enforcing Python style)
+- **SQLite Viewer** by Florian Klampfer (for viewing SQLite databases)
+- **WSL** by Microsoft (for running Linux tools on Windows)
+
 
 ## Task 1. Use Tools from Module 1 and 2
 
 Before starting, ensure you have completed the setup tasks in <https://github.com/denisecase/buzzline-01-case> and <https://github.com/denisecase/buzzline-02-case> first. 
 
-Versions matter. Python 3.11 is required. See the instructions for the required Java JDK and more. 
+**Important:** Python **3.11** is required for this project.  
+Additionally, ensure you have the correct **Java JDK** and other dependencies installed.
 
 ## Task 2. Copy This Example Project and Rename
 
@@ -33,10 +37,10 @@ Use your README.md to record your workflow and commands.
 
 ## Task 3. Manage Local Project Virtual Environment
 
-Follow the instructions in [MANAGE-VENV.md](https://github.com/denisecase/buzzline-01-case/docs/MANAGE-VENV.md) to:
-1. Create your .venv
-2. Activate .venv
-3. Install the required dependencies using requirements.txt.
+Follow the instructions in [MANAGE-VENV.md] to:
+1. **Create** your virtual environment (`.venv`).
+2. **Activate** `.venv` (Windows: `venv\Scripts\activate`, Mac/Linux: `source venv/bin/activate`).
+3. **Install** the required dependencies using `requirements.txt` (`pip install -r requirements.txt`).
 
 ## Task 4. Start Zookeeper and Kafka (Takes 2 Terminals)
 
@@ -93,17 +97,13 @@ Use the commands below to activate .venv, and start the consumer.
 Windows:
 ```shell
 .venv\Scripts\activate
-py -m consumers.kafka_consumer_montoya
-OR
-py -m consumers.file_consumer_montoya
+py -m consumers.consumer_montoya
 ```
 
 Mac/Linux:
 ```zsh
 source .venv/bin/activate
-python3 -m consumers.kafka_consumer_montoya
-OR
-python3 -m consumers.file_consumer_montoya
+python3 -m consumers.consumer_montoya
 ```
 
 ---

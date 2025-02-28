@@ -3,7 +3,7 @@ producer_montoya.py
 
 Stream JSON data to a file and - if available - a Kafka topic.
 
-Example JSON message
+Example JSON message:
 {
     "message": "I just bought a phone! It was amazing.",
     "customer": "Alice",
@@ -40,8 +40,8 @@ from utils.utils_logger import logger
 
 def assess_sentiment(text: str) -> float:
     """
-    Stub for sentiment analysis.
-    Returns a random float between 0 and 1 for now.
+    Simulates sentiment analysis.
+    Returns a random float between 0 and 1 as a sentiment score.
     """
     return round(random.uniform(0, 1), 2)
 
@@ -51,7 +51,7 @@ def assess_sentiment(text: str) -> float:
 
 def generate_messages():
     """
-    Generate a stream of JSON messages simulating customer feedback.
+    Continuously generates a stream of JSON messages simulating customer feedback.
     """
     ADJECTIVES = ["amazing", "terrible", "satisfactory", "disappointing", "fantastic"]
     ACTIONS = ["bought", "used", "returned", "recommended", "tried"]
@@ -79,16 +79,16 @@ def generate_messages():
         message_text = f"I just {action} {product}! It was {adjective}."
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Find category based on keywords
+        # Identify the keyword mentioned and map it to a category
         keyword_mentioned = next(
             (word for word in KEYWORD_CATEGORIES if word in product), "other"
         )
         category = KEYWORD_CATEGORIES.get(keyword_mentioned, "other")
 
-        # Assess sentiment
+        # Assign a random sentiment score
         sentiment = assess_sentiment(message_text)
 
-        # Create JSON message
+        # Create JSON message structure
         json_message = {
             "message": message_text,
             "customer": customer,
@@ -106,6 +106,9 @@ def generate_messages():
 #####################################
 
 def main() -> None:
+    """
+    Initializes the producer, generates messages, and streams them to Kafka or a file.
+    """
 
     logger.info("Starting Producer to run continuously.")
 
@@ -119,6 +122,7 @@ def main() -> None:
         sys.exit(1)
 
     try:
+        # Ensure previous live data file is removed before generating new messages
         if live_data_path.exists():
             live_data_path.unlink()
         os.makedirs(live_data_path.parent, exist_ok=True)
@@ -148,9 +152,11 @@ def main() -> None:
         for message in generate_messages():
             logger.info(message)
 
+            # Write the message to a live data file
             with live_data_path.open("a") as f:
                 f.write(json.dumps(message) + "\n")
 
+            # Send message to Kafka if producer is available
             if producer:
                 producer.send(topic, value=message)
 
